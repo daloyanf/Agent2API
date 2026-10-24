@@ -13,8 +13,15 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
 
+      # server crate 的 include_bytes!/include_str! 以源码文件为基准上溯五层
+      # 引用 workspace 外层的 desktop-tauri/ui/（设计令牌/组件库/提供商图标）。
+      # cross 只把 workspace 目录挂进容器（/project），上溯五层落在 /，
+      # 因此把 ui 挂到容器内 /ui 供编译期读取。
       - name: Build agent2api-server (armv7 musl static)
         working-directory: desktop-tauri/src-tauri
+        env:
+          CROSS_CONTAINER_OPTS: --volume ${{ github.workspace }}/desktop-tauri/ui:/ui:ro
+          DOCKER_OPTS: --volume ${{ github.workspace }}/desktop-tauri/ui:/ui:ro
         run: cross build --release --locked --target armv7-unknown-linux-musleabihf -p agent2api-server
 
       - name: Upload artifact
